@@ -56,10 +56,3 @@ class Data:
             count = self.data[col].nunique()
             print(f'{col}: {count} values')
 
-
-
-# print('start')
-# data = Data()
-# x_train = data.handleXY()[0]
-# print(x_train[:5])
-# print('done!!!')
