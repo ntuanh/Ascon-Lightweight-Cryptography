@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader , TensorDataset
 from torchvision import datasets
 from torchvision.transforms import ToTensor
 
-from handle_data import Data
+from model.handle_data import Data
 
 if torch.cuda.is_available():
     device = torch.device("cuda")
@@ -19,13 +19,13 @@ class NeuralNetwork(nn.Module):
         super().__init__()
         data = Data()
         self.linear_relu_stack = nn.Sequential(
-            nn.Linear(data.get_input_size(), 512),
+            nn.Linear(data.get_input_size(), 16),
             activation_func,
-            nn.Linear(512, 512),
+            nn.Linear(16, 8),
             nn.Tanh(),
-            nn.Linear(512, 256),
+            nn.Linear(8, 4),
             nn.Tanh(),
-            nn.Linear(256, 10)
+            nn.Linear(4, 2)
         )
 
     def forward(self, x):
