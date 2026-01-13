@@ -4,12 +4,16 @@
 #include <cstdint>
 #include <string>
 #include <unistd.h>
+#include <chrono>
 
 
 #include <curl/curl.h>
 #include <nlohmann/json.hpp>             // nlohmann::json
 #include "ascon-128a.h"
 #include "nn_weights.h"
+
+#define NUM_MEASURE 20
+
 
 
 using json = nlohmann::json;
@@ -124,29 +128,36 @@ void forward_last_layer(const float in[4], float out[2]) {
         out[i] = sum;
     }
 }
-
 int main() {
     curl_global_init(CURL_GLOBAL_ALL);
 
     std::cout << "Logging into ThingsBoard...\n";
-
     std::string jwt = tb_login();
     std::cout << "Login Done\n\n";
 
-    while (true) {
-        std::string cipher_hex, tag_hex;
+    using Clock = std::chrono::high_resolution_clock;
+    using ms = std::chrono::duration<double, std::milli>;
 
-        std::cout << " Waiting for telemetry...\n";
+    std::vector<double> loop_times;
+    loop_times.reserve(NUM_MEASURE);
+
+    int count = 0;
+
+    while (count < NUM_MEASURE) {
+
+        std::string cipher_hex, tag_hex;
+        std::cout << "Waiting for telemetry...\n";
 
         if (!get_latest_cipher_tag(jwt, cipher_hex, tag_hex)) {
-            std::cerr << "No telemetry yet\n\n";
+            std::cerr << "No telemetry yet\n";
             sleep(2);
             continue;
         }
 
-        std::cout << "Telemetry received\n";
-        std::cout << "Cipher (hex): " << cipher_hex << "\n";
-        std::cout << "Tag    (hex): " << tag_hex << "\n";
+        // =========================
+        // START timing
+        // =========================
+        auto t_start = Clock::now();
 
         // --------------------------
         // Decode hex
@@ -158,8 +169,6 @@ int main() {
         // --------------------------
         // ASCON decrypt
         // --------------------------
-        std::cout << "Decrypting (ASCON-128a)...\n";
-
         bool ok = ascon128a_decrypt(
             P.data(),
             C.data(), C.size(),
@@ -170,14 +179,12 @@ int main() {
         );
 
         if (!ok) {
-            std::cerr << "AUTH FAILED (tag mismatch)\n\n";
+            std::cerr << "AUTH FAILED\n";
             continue;
         }
 
-        std::cout << "Decryption Done\n";
-
         // --------------------------
-        // Unpack quantized payload
+        // Dequant + inference
         // --------------------------
         float scale;
         memcpy(&scale, P.data(), sizeof(float));
@@ -190,38 +197,127 @@ int main() {
         for (int i = 0; i < 4; i++)
             features[i] = q[i] / scale;
 
-        // std::cout << "\n Recovered feature map\n";
-        // std::cout << "Scale = " << scale << "\n";
-        // for (int i = 0; i < 4; i++)
-        //     std::cout << "Feature[" << i << "] = " << features[i] << "\n";
-
-        // --------------------------
-        // Forward last layer
-        // --------------------------
         float logits[2];
         forward_last_layer(features, logits);
 
-        // Argmax
         int pred = (logits[0] > logits[1]) ? 0 : 1;
 
-        // --------------------------
-        // Final output
-        // --------------------------
-        // std::cout << "\n=====================================\n";
-        // std::cout << "FINAL MODEL OUTPUT\n";
-        // std::cout << "=====================================\n";
-        // std::cout << "Logit[0] = " << logits[0] << "\n";
-        // std::cout << "Logit[1] = " << logits[1] << "\n";
-        float res = logits[1] + 2*logits[0];
-        std::cout << "res = " << res << "\n";
-        
-        if (res > 3.3) {
-            std::cout << "Fire !!!\n";
-        }
-        else {
-            std::cout << "No Fire\n";
-        }
+        float res = logits[1] + 2 * logits[0];
 
+        // =========================
+        // END timing
+        // =========================
+        auto t_end = Clock::now();
+
+        double elapsed_ms = ms(t_end - t_start).count();
+        loop_times.push_back(elapsed_ms);
+
+        // =========================
+        // Print per-iteration result
+        // =========================
+        std::cout << "Loop " << count
+                  << " time = " << elapsed_ms << " ms | ";
+
+        if (res > 3.3)
+            std::cout << "Fire !!!\n";
+        else
+            std::cout << "No Fire\n";
+
+        count++;
         sleep(2);
     }
+
+    // =========================
+    // Print all results
+    // =========================
+    std::cout << "\nSERVER LOOP TIMES (ms)\n[ ";
+    for (size_t i = 0; i < loop_times.size(); i++) {
+        std::cout << loop_times[i];
+        if (i < loop_times.size() - 1) std::cout << ", ";
+    }
+    std::cout << " ]\n";
+
+    return 0;
 }
+
+// int main() {
+//     curl_global_init(CURL_GLOBAL_ALL);
+
+//     std::cout << "Logging into ThingsBoard...\n";
+
+//     std::string jwt = tb_login();
+//     std::cout << "Login Done\n\n";
+
+//     while (true) {
+//         std::string cipher_hex, tag_hex;
+
+//         std::cout << " Waiting for telemetry...\n";
+
+//         if (!get_latest_cipher_tag(jwt, cipher_hex, tag_hex)) {
+//             std::cerr << "No telemetry yet\n\n";
+//             sleep(2);
+//             continue;
+//         }
+
+//         std::cout << "Telemetry received\n";
+//         std::cout << "Cipher (hex): " << cipher_hex << "\n";
+//         std::cout << "Tag    (hex): " << tag_hex << "\n";
+
+//         // --------------------------
+//         // Decode hex
+//         // --------------------------
+//         auto C = hex_to_bytes(cipher_hex);
+//         auto T = hex_to_bytes(tag_hex);
+//         std::vector<uint8_t> P(C.size());
+
+//         // --------------------------
+//         // ASCON decrypt
+//         // --------------------------
+//         std::cout << "Decrypting (ASCON-128a)...\n";
+
+//         bool ok = ascon128a_decrypt(
+//             P.data(),
+//             C.data(), C.size(),
+//             ASCON_AD, 0,
+//             ASCON_NONCE,
+//             ASCON_KEY,
+//             T.data()
+//         );
+
+//         if (!ok) {
+//             std::cerr << "AUTH FAILED (tag mismatch)\n\n";
+//             continue;
+//         }
+
+//         // std::cout << "Decryption Done\n";
+
+//         float scale;
+//         memcpy(&scale, P.data(), sizeof(float));
+
+//         int q[4];
+//         for (int i = 0; i < 4; i++)
+//             q[i] = (int8_t)P[sizeof(float) + i];
+
+//         float features[4];
+//         for (int i = 0; i < 4; i++)
+//             features[i] = q[i] / scale;
+
+//         float logits[2];
+//         forward_last_layer(features, logits);
+
+//         // Argmax
+//         int pred = (logits[0] > logits[1]) ? 0 : 1;
+
+//         float res = logits[1] + 2*logits[0];
+//         std::cout << "res = " << res << "\n";
+        
+//         if (res > 3.3) {
+//             std::cout << "Fire !!!\n";
+//         }
+//         else {
+//             std::cout << "No Fire\n";
+//         }
+
+//         sleep(2);
+//     }
+// }
