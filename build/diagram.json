@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "author": "Uri Shaked",
+  "editor": "wokwi",
+  "parts": [
+    { "type": "board-esp32-devkit-c-v4", "id": "esp", "top": -105.6, "left": -91.16, "attrs": {} },
+    { "type": "wokwi-gas-sensor", "id": "gas1", "top": -112.5, "left": -309.8, "attrs": {} },
+    { "type": "wokwi-ds1307", "id": "rtc1", "top": 23.4, "left": 105.7, "attrs": {} },
+    { "type": "wokwi-potentiometer", "id": "pot1", "top": -164.5, "left": 115, "attrs": {} },
+    {
+      "type": "wokwi-ntc-temperature-sensor",
+      "id": "ntc1",
+      "top": -26.2,
+      "left": -307.8,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-dht22",
+      "id": "dht1",
+      "top": -268.5,
+      "left": -72.6,
+      "attrs": { "temperature": "-40", "humidity": "78.5" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "rtc1:GND", "esp:GND.2", "black", [ "h-19.2", "v-115.2", "h-9.6" ] ],
+    [ "rtc1:5V", "esp:5V", "red", [ "h-19.2", "v86", "h-211.2", "v-19.2" ] ],
+    [ "esp:21", "rtc1:SDA", "green", [ "h86.4", "v86.4" ] ],
+    [ "esp:22", "rtc1:SCL", "green", [ "h86.4", "v9.6" ] ],
+    [ "pot1:GND", "esp:GND.2", "black", [ "v19.2", "h-9.6" ] ],
+    [ "pot1:VCC", "esp:3V3", "red", [ "v230.4", "h-279.2", "v-211.2" ] ],
+    [ "esp:34", "pot1:SIG", "green", [ "h-28.65", "v172.8", "h259.2" ] ],
+    [ "gas1:VCC", "esp:3V3", "red", [ "h28.8", "v-10.5" ] ],
+    [ "gas1:GND", "esp:GND.2", "black", [ "h28.8", "v-29.6", "h163.2" ] ],
+    [ "gas1:AOUT", "esp:35", "green", [ "h28.8", "v67.2" ] ],
+    [ "ntc1:GND", "gas1:GND", "black", [ "h19.2", "v-76.8" ] ],
+    [ "ntc1:VCC", "gas1:VCC", "red", [ "h19.2", "v-76.8" ] ],
+    [ "esp:32", "ntc1:OUT", "green", [ "h-57.45", "v38.4" ] ],
+    [ "dht1:VCC", "esp:3V3", "red", [ "v0", "h-57.6", "v76.8" ] ],
+    [ "esp:27", "dht1:SDA", "green", [ "h-28.65", "v-144", "h67.2", "v9.6" ] ],
+    [ "dht1:GND", "esp:GND.2", "black", [ "v28.8", "h38.4", "v-9.6" ] ]
+  ],
+  "dependencies": {}
+}
