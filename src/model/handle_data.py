@@ -3,7 +3,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-data_path = 'dataset/smoke_detection_iot.csv'
+data_path = '../../dataset/smoke_detection_iot.csv'
 
 class Data:
     def __init__(self , path = data_path):
@@ -37,9 +37,15 @@ class Data:
         )
 
     def scale(self):
-        scaler = StandardScaler()
-        self.x_train = scaler.fit_transform(self.x_train)
-        self.x_test = scaler.fit_transform(self.x_test)
+        self.scaler = StandardScaler()
+        self.x_train = self.scaler.fit_transform(self.x_train)
+        self.x_test = self.scaler.transform(self.x_test)
+
+    def print_scaler_params(self):
+        print("Mean:")
+        print(self.scaler.mean_)
+        print("\nStd:")
+        print(self.scaler.scale_)
 
     def handleXY(self):
         self.extract()
@@ -55,4 +61,11 @@ class Data:
         for col in self.effective_columns :
             count = self.data[col].nunique()
             print(f'{col}: {count} values')
+
+
+data = Data()
+x_train, x_test, y_train, y_test = data.handleXY()
+
+data.print_scaler_params()
+
 

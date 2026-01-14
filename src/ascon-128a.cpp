@@ -1,4 +1,4 @@
-#include "ascon128a.h"
+#include "ascon-128a.h"
 #include <string.h>
 
 // ================= Rotation =================
