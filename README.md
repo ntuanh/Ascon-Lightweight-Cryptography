@@ -31,7 +31,7 @@ Sensors → Client (Arduino - Split Inference + Encryption) → MQTT → Server 
 
 Watch the demonstration video showcasing the complete system in action:
 
-[View Demo Video](demo/demoCryptoGraphy.mp4)
+[ View Demo Video](https://drive.google.com/file/d/1ePSbB3E873dlWBc6pWmMPIssT3s3rPFK/view?usp=drive_link)
 
 *Note: The video demonstrates the encrypted split inference process with real-time sensor data processing.*
 
